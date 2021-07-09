@@ -1,0 +1,23 @@
+---
+- include_tasks: ../../common/pre_check.yml
+- include_tasks: ../../common/check_mysql_status.yml
+
+- name: Check Billing Scheduler is running
+  shell: ps -ef | grep billingScheduler
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check Billing API is running
+  shell: ps -ef | grep billingApi
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check Billing Core is running
+  shell: ps -ef | grep billingCore
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check Billing Dunning is running
+  shell: ps -ef | grep billingDunning
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

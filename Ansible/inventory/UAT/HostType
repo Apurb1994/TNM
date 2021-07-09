@@ -1,0 +1,11 @@
+[target_server]
+crm-testbed
+
+[middleware_server]
+crm-testbed
+
+[om-core_server]
+crm-testbed
+
+[om-model_server]
+crm-testbed

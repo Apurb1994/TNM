@@ -1,0 +1,25 @@
+---
+- name: PRE_CHECK RAM utilization
+  shell: free -m
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: If available RAM is less than 1GB then stop pipeline
+  shell: free -h | awk '{ print $7 }' | cut -d'G' -f1 | head -2 | tail -1
+  register: result
+- fail:
+    msg: "Not enough RAM available."
+  when: "result.stdout|int < 1"
+
+- name: PRE_CHECK disk space utilization
+  shell: df -h
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: If disk space utilization is more than 75% then stop pipeline
+  shell: |
+    df -kh | grep '/opt' | awk '{print $5}' | cut -d'%' -f1
+  register: result
+- fail:
+    msg: "Insufficient disk space available ({{ 100 - result.stdout|int }}%)"
+  when: "result.stdout|int > 75"

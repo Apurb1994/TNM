@@ -1,0 +1,40 @@
+---
+- hosts: om-model_server
+  become_user: root
+  tasks:
+  # - name: Copy file to a remote server
+    # copy:
+     # src: /builds/bss/tnm
+     # dest: /home/tnmops/
+
+
+  - copy:
+      src: "{{ item }}"
+      dest: /home/tnmops/DEVOPS/
+#      owner: root
+#      mode: 600
+    with_fileglob:
+      - /builds/bss/deployment/tnm-crm/tnm-malawi-crm/*     
+
+    # - find: paths="/builds/bss/deployment/tnm-crm/tnm-malawi-crm/" recurse=no patterns=".*"
+      # register: files_to_copy
+    # - fetch: src={{ item.path }} dest=/home/tnmops/
+      # with_items: "{{ files_to_copy.files }}"
+
+    # - name: Ansible copy directory to the remote server
+      # copy:
+        # src:/builds/bss/deployment/tnm-crm/tnm-malawi-crm
+        # dest:/home/tnmops/
+  # - name: use find to get the files list which you want to copy/fetch
+    # find: 
+      # paths: /builds/bss/deployment/tnm-crm/tnm-malawi-crm/
+      # patterns: ".*"
+      # use_regex: True   
+    # register: file_2_fetch
+
+  # - name: use fetch to get the files
+    # fetch:
+      # src: "{{ item.path }}"
+      # dest: /home/tnmops/
+      # flat: yes
+    # with_items: "{{ file_2_fetch.files }}"        

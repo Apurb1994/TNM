@@ -1,0 +1,23 @@
+---
+- name: Unarchive zip file
+  shell:
+    echo "zip_file = {{ zip_file }}"
+    echo "\nsrc_path = {{ src_path }}"
+    echo "dest_path = {{ dest_path }}"
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Unarchive zip file
+  unarchive:
+    src: "{{ src_path }}/{{ zip_file }}"
+    dest: "{{ dest_path }}"
+    remote_src: yes
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Remove zip file
+  file:
+    path: "{{ src_path }}/{{ zip_file }}"
+    state: absent
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

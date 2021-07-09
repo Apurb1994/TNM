@@ -1,0 +1,12 @@
+---
+- name: Check jdk installation status
+  raw: java -version
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+- fail:
+    msg: "JDK 1.8.0 is not installed..."
+  when: 'result.stdout is search("1.8") == false'
+- debug:
+    msg: "JDK 1.8.0 is installed..."
+  when: 'result.stdout is search("1.8") == true'
+

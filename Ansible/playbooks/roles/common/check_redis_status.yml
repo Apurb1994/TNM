@@ -1,0 +1,15 @@
+---
+- name: Show redis status and version
+  shell: /usr/local/bin/redis-server -v
+  register: redis_result
+- debug: msg="{{ redis_result.stdout_lines }}"
+
+- name: Check redis status and version
+  shell: /usr/local/bin/redis-server -v | awk {'print $3'} | awk -F "=" {'print $2'}
+  register: result
+- debug:
+    msg: "redis-server is up and running"
+  when: result.stdout == "5.0.5" 
+- fail:
+    msg: "redis-server is not running"
+  when: result.stdout != "5.0.5"

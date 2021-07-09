@@ -1,0 +1,21 @@
+---
+- name: Create BKP directory
+  file:
+    path: "{{ dir_path }}/BKP"
+    state: directory
+    recurse: yes
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+
+- name: Taking DB backup
+  shell: |
+    # Cleaning old DB backup
+    cd {{ dir_path }}/BKP
+    rm -rf *
+
+    # Taking DB backup
+    mongoexport --db {{ db_name }} --collection {{ collection_name }} --out {{ collection_name }}_$(date +"%d%m%Y%H%M%S").json
+   
+    echo "DB backup taken successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

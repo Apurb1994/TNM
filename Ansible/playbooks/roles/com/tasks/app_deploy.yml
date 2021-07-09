@@ -1,0 +1,52 @@
+---
+- include_tasks: ../../common/create_base_directory.yml
+
+- include_tasks: ../../common/kill_process.yml
+  vars:
+    process_name: "OM_HARGRAY"
+
+- name: Removing old deployed packages
+  shell: |
+    cd {{ com_deployment_path }}
+    rm -rf com*.war
+    echo "Removed old packages successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Create COM jar path if not exists
+  file:
+    path: "{{ com_om_jar_path }}/{{ deployment_version }}"
+    state: directory
+    recurse: yes
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+
+- include_tasks: ../../common/artifactory_download.yml
+
+# - name: "Untar the packages for COM"
+#   shell: |
+#       cd {{ com_deployment_path }}
+#       tar -xzvf com.war.tgz
+#       rm com.war.tgz
+#       echo "Application untarred successfully for com.war..."
+
+#       cd {{ com_om_jar_path }}
+#       tar -xzvf flowjar.tgz
+#       rm flowjar.tgz
+#       cd flowjar
+#       mv * {{ com_om_jar_path }}
+#       cd {{ com_om_jar_path }}
+#       rm -r flowjar
+#       echo "Application untarred successfully for flowjar..."
+#   register: result
+# - debug: msg="{{ result.stdout_lines }}"
+
+- name: Creating a dodeploy file
+  shell: |   
+    cd {{ com_deployment_path }}
+    rm -rf com*.war.*
+    touch com-{{ deployment_version }}.war.dodeploy
+    ls -l
+    echo "dodeploy file created successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

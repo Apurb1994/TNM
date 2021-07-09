@@ -1,0 +1,58 @@
+---
+- include_tasks: ../../common/create_base_directory.yml
+
+- include_tasks: ../../common/kill_process.yml
+  vars:
+    process_name: "tnmCrm "
+
+- name: Check bkp_path path if not present 
+  stat:
+    path: "{{ tnm_crm_backup_path }}"
+  register: bkp_path
+
+- name: "echo BKP directory already existed"
+  debug:
+    msg: "the BKP directory is already existed"
+  when: bkp_path.stat.exists
+
+- name: Create BKP path directory if not exists
+  file:
+    path: "{{ tnm_crm_backup_path }}"
+    state: directory
+    mode: 0775
+    group: "{{ user_name }}"
+    owner: "{{ user_name }}"
+  when: bkp_path.stat.exists == false
+
+- name: Search war file in mapping.txt file
+  shell: |
+    cd /home/tnmops/DEVOPS/
+    cat mapping.txt|grep .war > /dev/null 2>&1 ; echo $? 
+  register: war_value
+- debug: msg="{{ war_value.stdout_lines }}"
+  
+- name: move old deployed packages
+  shell: |
+    cd {{ tnm_crm_deployment_path }}
+    mv CRM-*.war {{ tnm_crm_backup_path }}
+    rm -rf CRM-*.war.*
+    echo "move old packages successfully..."
+  when: war_value.stdout == "0"
+
+- include_tasks: ../../common/artifactory_download.yml
+
+# - name: Rename ? file if found in deployment path
+#   shell: |
+#     cd {{ tnm_crm_deployment_path  }}
+#     mv ? TNM-CRM-{{ deployment_version }}.war
+#   when: war_value.stdout == "0"
+#   ignore_errors: yes
+  
+# - name: Creating dodeploy file
+#   shell: |   
+#     cd {{ tnm_crm_deployment_path  }}
+#     #rm -rf CRM-*.war.*
+#     touch CRM-{{ deployment_version }}.war.dodeploy
+#     ls -l
+#     echo "dodeploy file created successfully..."
+#   when: war_value.stdout == "0"

@@ -1,0 +1,50 @@
+---
+- pause:
+    minutes: 1
+
+- include_tasks: ../../common/post_check.yml
+
+#- name: Verify BIL_API deployment
+#  shell: cd "{{ bil_api_deployment_path }}" && ls -lrth
+#  register: result
+#- debug: msg="{{ result.stdout_lines }}"
+
+#- name: Check BIL_API deployed status 
+#  shell: cd "{{ bil_api_deployment_path }}" && ls -lrth | grep -i "BillingApp-{{ deployment_version }}.war.deployed" | wc -l
+#  register: result
+#- debug: 
+#    msg: "Application deployed successfully"
+#  when: result.stdout == "1"   
+#- fail: 
+#    msg: "Application deployment failed"
+#  when: result.stdout != "1"
+  
+# - name: Check BIL_API deployed status 
+#   shell: cd "{{ bil_api_deployment_path }}" && ls -lrth | grep -i "6dbillingApp-{{ deployment_version }}.war.deployed" | wc -l
+#   register: result
+# - debug: 
+#     msg: "Application deployed successfully"
+#   when: result.stdout == "1"   
+# - fail: 
+#     msg: "Application deployment failed"
+#   when: result.stdout != "1"
+
+- name: Check Billing Scheduler is running
+  shell: ps -ef | grep billingScheduler
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check Billing API is running
+  shell: ps -ef | grep billingApi
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check Billing Core is running
+  shell: ps -ef | grep billingCore
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check Billing Dunning is running
+  shell: ps -ef | grep billingDunning
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

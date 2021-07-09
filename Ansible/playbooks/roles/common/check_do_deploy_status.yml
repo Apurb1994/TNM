@@ -1,0 +1,15 @@
+---
+- name: Verify application deployment
+  shell: cd "{{ deployment_path }}" && ls -lrth
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+ 
+- name: Check application deployed status 
+  shell: cd "{{ deployment_path }}" && ls -lrth | grep -i deployed | wc -l
+  register: result
+- debug: 
+    msg: "Application deployed successfully"
+  when: result.stdout == "1"   
+- fail: 
+    msg: "Application deployment failed"
+  when: result.stdout != "1"

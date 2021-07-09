@@ -1,0 +1,19 @@
+---
+- name: Fatching DB update script
+  shell: |
+    # Cleaning old DB script
+    cd {{ dir_path }}
+    rm -rf db_script.sql
+    #mv db_script.sql db_script_$(date +"%d%m%Y%H%M%S").bkp
+    
+    # Downloadig latest DB script
+    curl -H 'X-JFrog-Art-Api:{{ artifactory_token }}' -O "{{ artifactory_url }}/db_script.sql"
+  register: result
+- debug: msg="{{result.stdout_lines}}"
+
+- name: Executing DB script
+  shell: |
+    mongoimport -h {{ ansible_ssh_host }} --db {{ db_name }} --collection {{ collection_name }} --file {{ dir_path }}/db_script.sql --jsonArray &
+  register: result
+  ignore_errors: true
+- debug: msg="{{result.stdout_lines}}"

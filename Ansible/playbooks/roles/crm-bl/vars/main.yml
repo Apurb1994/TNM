@@ -1,0 +1,2 @@
+---
+dir_path: "{{ base_dir_path }}/CRM-BL"

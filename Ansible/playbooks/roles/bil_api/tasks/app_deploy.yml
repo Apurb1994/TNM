@@ -1,0 +1,25 @@
+---
+- include_tasks: ../../common/create_base_directory.yml
+
+- name: Removing old deployed packages
+  shell: |
+    cd {{ bil_api_deployment_path }}
+    rm -rf BillingApp*.war
+    echo "Removed old packages successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- include_tasks: ../../common/artifactory_download.yml
+
+#- name: Creating a dodeploy file
+#  shell: |   
+#    cd {{ bil_api_deployment_path }}
+#    rm -rf BillingApp*.war.*
+#    touch  BillingApp-{{ deployment_version }}.war.dodeploy
+#    ls -l
+#    echo "dodeploy file created successfully..."
+#  register: result
+#- debug: msg="{{ result.stdout_lines }}"
+
+
+

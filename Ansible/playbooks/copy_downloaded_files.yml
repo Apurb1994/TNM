@@ -1,0 +1,19 @@
+---
+- hosts: target_server
+  become_user: root
+  tasks:
+  # - name: Copy file to a remote server
+    # copy:
+     # src: /builds/bss/tnm
+     # dest: /home/tnmops/
+
+
+  - copy:
+      src: "{{ item }}"
+      dest: /home/tnmops/DEVOPS/
+#      owner: root
+#      mode: 600
+    with_fileglob:
+      #- ./*
+      #- /builds/zxsZiPFK/0/bss/deployment/tnm-crm/tnm-malawi-crm/*
+      - /builds/ya8mnyfC/0/bss/deployment/tnm-crm/tnm-malawi-crm/*     

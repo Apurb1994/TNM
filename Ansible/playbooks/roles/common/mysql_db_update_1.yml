@@ -1,0 +1,45 @@
+---
+- name: Fatching DB update script
+  shell: |
+    # Cleaning old DB script
+    cd {{ dir_path }}
+    rm -rf db_script.sql
+    
+    # Downloadig latest DB script
+    curl -H 'X-JFrog-Art-Api:{{ artifactory_token }}' -O "{{ artifactory_url }}/db_script.sql"
+  register: result
+- debug: msg="{{result.stdout_lines}}"
+
+- name: Check the db_script.sql exists or not
+  stat:
+    path: "{{ dir_path }}/db_script.sql"
+  register: result
+- fail: 
+    msg: "{{ dir_path }}/db_script.sql not exists"
+  when: result == False
+
+# - name: DB script content check
+#   shell: |
+#     cd {{ dir_path }} && grep -i "404" db_script.sql | grep -v grep > /dev/null 2>&1 ; echo $?
+#   register: result    
+# - fail:
+#     msg: "Either db_script.sql is not available in artifactory or the content of the db_script.sql is not correct"
+#   when: result.stdout != "0"
+
+- name: Executing DB script
+  shell: |
+    mysql -u{{ db_user }} -p{{ db_pass_1 }} -h{{ db_host }} -P{{ db_port }} -A {{ db_name }} < {{ dir_path }}/db_script.sql
+  register: result
+- debug: msg="{{result.stdout_lines}}"
+
+# - name: Execute DB script
+#   shell: |
+#     cd {{ dir_path }}
+#     echo "content_chk -> $content_chk"
+#     if [ $content_chk != 0 ]; then
+#       mysql -u{{ db_user }} -p{{ db_pass }} -h{{ db_host }} -P{{ db_port }} -A {{ db_name }} < {{ dir_path }}/db_script.sql
+#     else
+#       echo "Skipping db_script.sql execution as either it's not available in artifactory or the content is not correct"
+#     fi
+#   register: result
+# - debug: msg="{{result.stdout_lines}}"

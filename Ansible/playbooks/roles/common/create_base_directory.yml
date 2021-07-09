@@ -1,0 +1,8 @@
+---
+- name: Create directory if not exists
+  file:
+    path: "{{ dir_path }}"
+    state: directory
+    recurse: yes
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"

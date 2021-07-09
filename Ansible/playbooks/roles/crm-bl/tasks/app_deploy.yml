@@ -1,0 +1,53 @@
+---
+- include_tasks: ../../common/create_base_directory.yml
+
+- include_tasks: ../../common/kill_process.yml
+  vars:
+    process_name: "tnmBl"
+
+- name: Check bkp_path path if not present 
+  stat:
+    path: "{{ crm_bl_backup_path }}"
+  register: bkp_path
+
+- name: "echo BKP directory already existed"
+  debug:
+    msg: "the BKP directory is already existed"
+  when: bkp_path.stat.exists
+
+- name: Create BKP path directory if not exists
+  file:
+    path: "{{ crm_bl_backup_path }}"
+    state: directory
+    mode: 0775
+    group: "{{ user_name }}"
+    owner: "{{ user_name }}"
+  when: bkp_path.stat.exists == false
+
+#- name: "Change '%23' to '#' in mapping.txt file"
+#  shell: |
+#    cd /home/tnmops/DEVOPS/
+#    sed -i 's/%23/#/g' mapping.txt    
+#  register: mapping_changes
+
+- name: Search war file in mapping.txt file
+  shell: | 
+    cd /home/tnmops/DEVOPS/
+    cat mapping.txt|grep .war > /dev/null 2>&1 ; echo $? 
+  register: war_value
+- debug: msg="{{ war_value.stdout_lines }}"
+  
+- name: move old deployed packages
+  shell: |
+    cd {{ crm_bl_deployment_path }}
+    mv crm.war {{ crm_bl_backup_path }}/bkp_crm.war_`date +"%d%m%Y%H%M%S"`
+    echo "move old packages successfully..."
+  when: war_value.stdout == "0"
+
+- include_tasks: ../../common/artifactory_download.yml
+
+- name: Rename the .war file 
+  shell: |
+    cd {{ crm_bl_deployment_path }}
+    mv crm*.war crm.war
+  register: war_change    

@@ -1,0 +1,11 @@
+---
+- name: Check Hadoop status
+  shell: hdfs version
+  register: hdfs_result
+- debug: msg="{{ hdfs_result.stdout_lines }}"
+- fail:
+    msg: "Failed - Hadoop is not installed"
+  when: hdfs_result is failed
+- debug:
+    msg: "Success - Hadoop is installed"
+  when:  hdfs_result is success

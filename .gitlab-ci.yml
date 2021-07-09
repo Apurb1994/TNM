@@ -1,0 +1,521 @@
+image: 10.0.14.79:5006/tools/ansible:v1
+default:
+  tags:
+    - shared-gitlab-15-ns
+    
+stages:
+  - input_validation  
+  - download_artifacts
+  - pre_check
+  - app_deploy
+  - db_deploy
+  - app_restart
+  - post_check
+
+
+
+#-----------------------------------------------------#
+#------------ Setting Up Global Variables ------------#
+#-----------------------------------------------------#
+
+variables:
+  #The below variable path is used to store the backup of existing database.
+  BASE_PATH: "/opt/tnmApps/devops"
+
+
+#-----------------------------------------------------#
+#------------ PIPELINE INPUT VALIDATION --------------#
+#-----------------------------------------------------#
+
+INPUT_VALIDATION:
+  stage: input_validation
+  script:
+    - export ANSIBLE_FORCE_COLOR=true
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - ansible-playbook Ansible/playbooks/Input_Validator.yml -e "deployment_env=$DEPLOYMENT_ENV" -e "deployment_app=$DEPLOY_APP" -e "release_version=$RELEASE_VERSION"
+
+
+  
+#-----------------------------------------------------#
+#--------------------CRM------------------------------#
+#-----------------------------------------------------#
+DOWNLOAD_NEXUS_ARTIFACTS:
+  stage: download_artifacts
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - chmod -R 777 Ansible/*
+    - |
+      curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/mapping.txt     
+      echo "Read the mapping file and transfer packages to the corresponding locations mentioned in mapping"
+      for line in `cat mapping.txt`
+      do
+        IFS='|' read -r -a array <<< "$line"
+        echo "Arifact Name = ${array[0]}, Target Location = ${array[1]}"
+        echo "Download the file in agent machine"
+        curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/${array[0]}
+      done
+      echo "Application packages updated successfully..."
+    - curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/db_script-$RELEASE_VERSION.sql  
+    - pwd
+    - source_dir=$(pwd)
+    - echo $source_dir
+    - ls -lrth
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/copy_downloaded_files.yml -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "CRM" || $DEPLOY_APP == "ALL"
+CRM_PRECHECK:
+  stage: pre_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/TNM_CRM_deployment.yml -e "env=target_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE" -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "CRM" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+CRM_APP_DEPLOY:
+  stage: app_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/TNM_CRM_deployment.yml -e "env=target_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "CRM" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+CRM_DB_DEPLOY:
+  stage: db_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/TNM_CRM_deployment.yml -e "env=target_server" -e "deployment_version=$RELEASE_VERSION" -e "RELEASE_VERSION=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "CRM" || $DEPLOY_APP == "ALL"
+  when: manual
+
+CRM_RESTART:
+  stage: app_restart
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/TNM_CRM_deployment.yml -e "env=target_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "CRM" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+CRM_POSTCHECK:
+  stage: post_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/TNM_CRM_deployment.yml -e "env=target_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "CRM" || $DEPLOY_APP == "ALL"
+  # when: manual
+  
+#-----------------------------------------------------#
+#--------------------MIDDLEWARE-----------------------#
+#-----------------------------------------------------#
+
+MIDDLEWARE_PRECHECK:
+  stage: pre_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/MIDDLEWARE_deployment.yml -e "env=middleware_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "MIDDLEWARE" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+MIDDLEWARE_DEPLOY:
+  stage: app_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/MIDDLEWARE_deployment.yml -e "env=middleware_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "MIDDLEWARE" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+MIDDLEWARE_DB_DEPLOY:
+  stage: db_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/MIDDLEWARE_deployment.yml -e "env=middleware_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "MIDDLEWARE" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+MIDDLEWARE_RESTART:
+  stage: app_restart
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/MIDDLEWARE_deployment.yml -e "env=middleware_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "MIDDLEWARE" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+MIDDLEWARE_POSTCHECK:
+  stage: post_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/MIDDLEWARE_deployment.yml -e "env=middleware_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "MIDDLEWARE" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+  
+
+#INPUT_VALIDATION:
+#  stage: input_validation
+#  script:
+#    - export ANSIBLE_FORCE_COLOR=true
+#    - export ANSIBLE_HOST_KEY_CHECKING=False
+#    - ansible-playbook Ansible/playbooks/Input_Validator.yml -e "deployment_env=$DEPLOYMENT_ENV" -e "deployment_app=$DEPLOY_APP" -e "release_version=$RELEASE_VERSION"
+#  only:
+#    variables:
+#      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+  #when: manual
+#-----------------------------------------------------#
+#--------------------om-core-----------------------#
+#-----------------------------------------------------#
+
+DOWNLOAD_NEXUS_ARTIFACTS_FOR_OM_CORE:
+  stage: download_artifacts
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - chmod -R 777 Ansible/*
+    - |
+      curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/mapping.txt
+      echo "Read the mapping file and transfer packages to the corresponding locations mentioned in mapping"
+      for line in `cat mapping.txt`
+      do
+        IFS='|' read -r -a array <<< "$line"
+        echo "Arifact Name = ${array[0]}, Target Location = ${array[1]}"
+        echo "Download the file in agent machine"
+        curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/${array[0]}
+      done
+      echo "Application packages updated successfully..."
+    - pwd
+    - ls -lrth
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-core_downloaded_files.yml -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+
+OM_CORE_PRECHECK:
+  stage: pre_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-core_deployment.yml -e "env=om-core_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE" -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+OM_CORE_APP_DEPLOY:
+  stage: app_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-core_deployment.yml -e "env=om-core_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+OM_CORE_DB_DEPLOY:
+  stage: db_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-core_deployment.yml -e "env=om-core_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+  when: manual
+
+OM_CORE_RESTART:
+  stage: app_restart
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-core_deployment.yml -e "env=om-core_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+OM_CORE_POSTCHECK:
+  stage: post_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-core_deployment.yml -e "env=om-core_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-core" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+
+#INPUT_VALIDATION:
+#  stage: input_validation
+#  script:
+#    - export ANSIBLE_FORCE_COLOR=true
+#    - export ANSIBLE_HOST_KEY_CHECKING=False
+#    - ansible-playbook Ansible/playbooks/Input_Validator.yml -e "deployment_env=$DEPLOYMENT_ENV" -e "deployment_app=$DEPLOY_APP" -e "release_version=$RELEASE_VERSION"
+#  only:
+#    variables:
+#      - $DEPLOY_APP == "OM-MODEL" || $DEPLOY_APP == "ALL"
+  #when: manual
+#-----------------------------------------------------#
+#--------------------om-model-----------------------#
+#-----------------------------------------------------#
+
+DOWNLOAD_NEXUS_ARTIFACTS_FOR_OM_MODEL:
+  stage: download_artifacts
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - chmod -R 777 Ansible/*
+    - |
+      curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/mapping.txt
+      echo "Read the mapping file and transfer packages to the corresponding locations mentioned in mapping"
+      for line in `cat mapping.txt`
+      do
+        IFS='|' read -r -a array <<< "$line"
+        echo "Arifact Name = ${array[0]}, Target Location = ${array[1]}"
+        echo "Download the file in agent machine"
+        curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/${array[0]}
+      done
+      echo "Application packages updated successfully..."
+    - pwd
+    - ls -lrth
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-model_downloaded_files.yml -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-model" || $DEPLOY_APP == "ALL"
+
+OM_MODEL_PRECHECK:
+  stage: pre_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-model_deployment.yml -e "env=target_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE" -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-model" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+OM_MODEL_APP_DEPLOY:
+  stage: app_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-model_deployment.yml -e "env=om-model_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-model" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+OM_MODEL_DB_DEPLOY:
+  stage: db_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-model_deployment.yml -e "env=om-model_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-model" || $DEPLOY_APP == "ALL"
+  when: manual
+
+OM_MODEL_RESTART:
+  stage: app_restart
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-model_deployment.yml -e "env=om-model_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-model" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+OM_MODEL_POSTCHECK:
+  stage: post_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/om-model_deployment.yml -e "env=om-model_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "om-model" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+
+#INPUT_VALIDATION:
+#  stage: input_validation
+#  script:
+#    - export ANSIBLE_FORCE_COLOR=true
+#    - export ANSIBLE_HOST_KEY_CHECKING=False
+#    - ansible-playbook Ansible/playbooks/Input_Validator.yml -e "deployment_env=$DEPLOYMENT_ENV" -e "deployment_app=$DEPLOY_APP" -e "release_version=$RELEASE_VERSION"
+#  only:
+#    variables:
+#      - $DEPLOY_APP == "CRM-BL" || $DEPLOY_APP == "ALL"
+  #when: manual
+#-----------------------------------------------------#
+#--------------------CRM-BL-----------------------#
+#-----------------------------------------------------#
+
+DOWNLOAD_NEXUS_ARTIFACTS_FOR_CRM_BL:
+  stage: download_artifacts
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - chmod -R 777 Ansible/*
+    - |
+      curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/mapping.txt
+      echo "Read the mapping file and transfer packages to the corresponding locations mentioned in mapping"
+      for line in `cat mapping.txt`
+      do
+        IFS='|' read -r -a array <<< "$line"
+        echo "Arifact Name = ${array[0]}, Target Location = ${array[1]}"
+        echo "Download the file in agent machine"
+        curl -X GET -u TNM-Malawi:TNM-Malawi-982 -O http://10.0.14.79:8081/repository/TNM-Malawi-releases/$DEPLOY_APP/$RELEASE_VERSION/${array[0]}
+      done
+      echo "Application packages updated successfully..."
+    - pwd
+    - ls -lrth
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/crm-bl_downloaded_files.yml -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "crm-bl" || $DEPLOY_APP == "ALL"
+
+CRM_BL_PRECHECK:
+  stage: pre_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/crm-bl_deployment.yml -e "env=crm_bl_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE" -vvv
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "crm-bl" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+CRM_BL_APP_DEPLOY:
+  stage: app_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/crm-bl_deployment.yml -e "env=crm_bl_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "crm-bl" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+CRM_BL_DB_DEPLOY:
+  stage: db_deploy
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/crm-bl_deployment.yml -e "env=crm_bl_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "crm-bl" || $DEPLOY_APP == "ALL"
+  when: manual
+
+CRM_BL_RESTART:
+  stage: app_restart
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/crm-bl_deployment.yml -e "env=crm_bl_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "crm-bl" || $DEPLOY_APP == "ALL"
+  # when: manual
+
+CRM_BL_POSTCHECK:
+  stage: post_check
+  script:
+    - export ANSIBLE_HOST_KEY_CHECKING=False
+    - export ANSIBLE_FORCE_COLOR=true
+    - ansible-playbook -i $CI_PROJECT_DIR/Ansible/inventory/${DEPLOYMENT_ENV} $CI_PROJECT_DIR/Ansible/playbooks/crm-bl_deployment.yml -e "env=crm_bl_server" -e "deployment_version=$RELEASE_VERSION" -e "deployment_env=$DEPLOYMENT_ENV" -e "base_dir_path=$BASE_PATH" -e "job=$CI_JOB_STAGE"  
+  environment:
+    name: "$DEPLOYMENT_ENV"
+  only:
+    variables:
+      - $DEPLOY_APP == "crm-bl" || $DEPLOY_APP == "ALL"
+  # when: manual

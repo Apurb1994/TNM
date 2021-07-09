@@ -1,0 +1,33 @@
+# 
+---
+- name: Create BKP directory if not exists
+  file:
+    path: "{{ dir_path }}/BKP"
+    state: directory
+    recurse: yes
+#    owner: "{{ ansible_ssh_user }}"
+#    group: "{{ ansible_ssh_user }}"
+
+- name: Taking DB backup
+  shell: |
+    # Cleaning old DB backup
+    cd {{ dir_path }}/BKP
+    mkdir temp
+    mv {{ db_name }}_*.DUMP.sql temp
+    # Taking DB backup
+    echo "mysqldump --user {{ login_db_user }} --password=`az account get-access-token --resource-type oss-rdbms --output tsv --query accessToken` --no-data -h{{ login_db_ip }} --databases {{ db_name }} > {{ dir_path }}/BKP/{{ db_name }}_$(date +"%d%m%Y%H%M%S")_DUMP.sql"
+    mysqldump --user {{ login_db_user }} --password=`az account get-access-token --resource-type oss-rdbms --output tsv --query accessToken` --no-data -h{{ login_db_ip }} --databases {{ db_name }} > {{ dir_path }}/BKP/{{ db_name }}_$(date +"%d%m%Y%H%M%S")_DUMP.sql
+    echo "DB Backup Path :"
+    pwd
+    ls -l
+    echo "DB backup taken successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Removing Old DB backup
+  shell: |
+    cd {{ dir_path }}/BKP
+    rm -rf temp
+    echo "Removed Old DB backup successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

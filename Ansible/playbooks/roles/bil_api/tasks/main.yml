@@ -1,0 +1,25 @@
+---
+- name: Show Application Deployment Details
+  include: "../../common/show_app_deploy_details.yml"
+  vars:
+    app_name: "Billing API (BIL_API)"
+
+- name: Application Precheck
+  include: "pre_check.yml"
+  when: job == "pre_check"
+
+- name: Application Deployment
+  include: "app_deploy.yml"
+  when: job == "app_deploy"
+
+- name: DB Deployment
+  include: "db_deploy.yml"
+  when: job == "db_deploy"
+
+- name: Application Restart
+  include: "restart_app.yml"
+  when: job == "app_restart"
+
+- name: Application Postcheck
+  include: "post_check.yml"
+  when: job == "post_check"

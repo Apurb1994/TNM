@@ -1,0 +1,14 @@
+[target_server]
+crm-test-svr
+
+[middleware_server]
+crm-test-svr
+
+[om-core_server]
+crm-test-svr
+
+[om-model_server]
+crm-test-svr
+
+[crm_bl_server]
+crm-test-svr

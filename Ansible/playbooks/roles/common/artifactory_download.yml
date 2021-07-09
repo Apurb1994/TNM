@@ -1,0 +1,26 @@
+---
+- name: Download artifacts from Nexus Artifactory & deploying to target node
+  shell: |
+    echo "Removing up old mapping file"
+    cd "{{ dir_path }}"
+    rm -rf mapping.txt
+    echo "Download latest mapping file from Artifactory"
+    cp -rf /home/tnmops/DEVOPS/mapping.txt ./
+    echo "Read the mapping file and transfer packages to the corresponding locations mentioned in mapping"
+    for line in `cat mapping.txt`
+    do
+      IFS='|' read -r -a array <<< "$line"
+      echo "Arifact Name = ${array[0]}, Target Location = ${array[1]}"
+      echo "cd $(echo "${array[1]}" | tr -d '\r')"
+      cd $(echo "${array[1]}" | tr -d '\r')
+      mv ${array[0]} bkp_${array[0]}_`date -I`
+      echo "mv ${array[0]} bkp_${array[0]}_`date -I`"
+      echo "mv /home/tnmops/DEVOPS/${array[0]} ${array[1]}"
+      mv /home/tnmops/DEVOPS/${array[0]} ${array[1]}
+      mv ? ${array[0]}
+      chown -R tnmops:tnmops ${array[0]}
+      chmod 755 ${array[0]}      
+    done
+    echo "Application packages updated successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

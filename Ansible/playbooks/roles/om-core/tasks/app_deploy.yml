@@ -1,0 +1,69 @@
+---
+- include_tasks: ../../common/create_base_directory.yml
+
+- include_tasks: ../../common/kill_process.yml
+  vars:
+    process_name: "tnmMiddleware"
+
+- name: Check bkp_path path if not present 
+  stat:
+    path: "{{ om_core_deployment_backpath }}"
+  register: bkp_path
+
+- name: "echo BKP directory already existed"
+  debug:
+    msg: "the BKP directory is already existed"
+  when: bkp_path.stat.exists
+
+- name: Create BKP path directory if not exists
+  file:
+    path: "{{ om_core_deployment_backpath }}"
+    state: directory
+    mode: 0775
+    group: "{{ user_name }}"
+    owner: "{{ user_name }}"
+  when: bkp_path.stat.exists == false
+
+
+- name: Search war file in mapping.txt file
+  shell: cd /home/tnmops/DEVOPS/ |cat mapping.txt|grep om-core* > /dev/null 2>&1 ; echo $? 
+  register: om_core
+- debug: msg="{{ om_core.stdout_lines }}"
+
+- name: move old deployed packages
+  shell: |
+    cd {{ om_core_lib_path }}
+    mv om-core-*.jar {{ om_core_deployment_backpath }}
+    #mv om-core-*.jar BKP_om-core-{{ deployment_version }}.jar_`date -I`
+    #mv BKP_om-core-*.jar_* {{ om_core_deployment_backpath }}
+    echo "move old packages successfully..."
+  when: om_core.stdout == "0"
+
+- include_tasks: ../../common/artifactory_download.yml
+
+# - name: moving created bkp files
+#   shell: |
+#     cd {{ middleware_lib_path }}
+#     mv CRM-*.war BKP_CRM-{{ deployment_version }}.war_`date -I`
+#     mv BKP_CRM-*.war_* /opt/tnmApps/tnmCrmTest/standalone/CRM_BACKUP
+#     rm -rf CRM-*.war.*
+#     #mv CRM-*.war bkp_`date -I`_CBS-*.war
+#     echo "move old packages successfully..."
+#     register: result
+# - debug: msg="{{ result.stdout_lines }}"
+
+# - name: Rename ? file if found in deployment path
+#   shell: |
+#     cd {{ tnm_crm_deployment_path  }}
+#     mv ? TNM-CRM-{{ deployment_version }}.war
+#   when: war_value.stdout == "0"
+#   ignore_errors: yes
+  
+# - name: Creating dodeploy file
+#   shell: |   
+#     cd {{ tnm_crm_deployment_path  }}
+#     #rm -rf CRM-*.war.*
+#     touch CRM-{{ deployment_version }}.war.dodeploy
+#     ls -l
+#     echo "dodeploy file created successfully..."
+#   when: war_value.stdout == "0"

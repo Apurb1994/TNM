@@ -1,0 +1,52 @@
+---
+#-----------------------------------------------------#
+#------------ Pipeline Input Validation --------------#
+#-----------------------------------------------------#
+- name:  Verify env variable
+  hosts: localhost
+  
+  vars:
+    env_list:
+      - TEST
+      - TEST-BED
+      - PREPROD
+      - PROD
+    app_list:
+      - "ALL"
+      - "CRM"
+      - "om-core"
+      - "om-model"
+      - "crm-bl"
+
+  tasks:
+    - name: Test variable values
+      shell: |
+        echo "$deployment_env"
+        echo "$deployment_app"
+      register: result
+    - debug: msg="{{ result.stdout_lines }}"
+    
+    - name: Verify Input DEPLOYMENT_ENV Empty
+      fail: msg="Deployment Environment can't be blank/empty. Please specify proper application deployment environment (TEST/TEST-BED/PREPROD/PROD)"
+      when: deployment_env == ""
+#      tags: always
+
+    - name: Verify Input DEPLOYMENT_ENV Name
+      fail: msg="Invalid Deployment Environment Name {{ deployment_env }}. Please specify proper application deployment environment (TEST/TEST-BED/PREPROD/PROD)"
+      when: deployment_env not in env_list
+#      tags: always
+    
+    - name: Verify Input DEPLOY_APP Empty
+      fail: msg="Deployment Application Name can't be blank/empty. Please specify proper application name to deploy (CRM/om-core/om-model/crm-bl/CRM/ESB/POS/SCM/SOM/BIL_API/BIL_COR/CMS/CVM_OTM/CVM_EDM/CVM_DUP/CVM_DWN/UPC_UI/UPC_BL/RRE/COMS_UI/COMS_BL/WFM/TMM_GUI/CRM_GUI/CRM_BL/CRM_TTM)"
+      when: deployment_app == ""
+#      tags: always
+
+    - name: Verify Input DEPLOY_APP Name
+      fail: msg="Invalid Application Name {{ deployment_app }}. It should be (ALL/om-core/om-model/crm-bl/CRM/COM/CRM/ESB/POS/SCM/SOM/BIL_API/BIL_COR/CMS/CVM_OTM/CVM_EDM/CVM_DUP/CVM_DWN/UPC_UI/UPC_BL/RRE/COMS_UI/COMS_BL/WFM/TMM_GUI/CRM_GUI/CRM_BL/CRM_TTM/TNM-CRM)"
+      when: deployment_app not in app_list
+#      tags: always
+
+    - name: Verify Input RELEASE_VERSION Empty
+      fail: msg="Release Version can't be blank/empty when DEPLOY_APP != ALL"
+      when: deployment_app != "ALL" and release_version == ""
+#      tags: always

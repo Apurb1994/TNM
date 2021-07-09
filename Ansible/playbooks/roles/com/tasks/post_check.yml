@@ -1,0 +1,31 @@
+---
+- pause:
+    minutes: 1
+
+- include_tasks: ../../common/post_check.yml
+
+- name: Verify COM deployment
+  shell: cd "{{ com_deployment_path }}" && ls -lrth
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check COM deployed status 
+  shell: cd "{{ com_deployment_path }}" && ls -lrth | grep -i "com-{{ deployment_version }}.war.deployed" | wc -l
+  register: result
+- debug: 
+    msg: "Application deployed successfully"
+  when: result.stdout == "1"   
+- fail: 
+    msg: "Application deployment failed"
+  when: result.stdout != "1"
+
+- name: Checking COM application status
+  shell: ps -aef | grep "OM_HARGRAY"
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+- fail:
+    msg: "OM_HARGRAY application is not running..."
+  when: 'result.stdout is search("/opt/BSS/OM_HARGRAY/standalone") == false'
+- debug:
+    msg: "OM_HARGRAY application is running properly..."
+  when: 'result.stdout is search("/opt/BSS/OM_HARGRAY/standalone") == true'

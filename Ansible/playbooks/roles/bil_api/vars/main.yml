@@ -1,0 +1,3 @@
+---
+dir_path: "{{ base_dir_path }}/BIL_API"
+artifactory_url: "{{ base_artifactory_url }}/BIL_API/{{ deployment_version }}"

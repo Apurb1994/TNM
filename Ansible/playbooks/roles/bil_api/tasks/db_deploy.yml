@@ -1,0 +1,8 @@
+---
+- include_tasks: ../../common/mysql_db_backup.yml
+  vars:
+    db_name: "{{ bil_api_db_name }}"
+
+- include_tasks: ../../common/mysql_db_update.yml
+  vars:
+    db_name: "{{ bil_api_db_name }}"

@@ -1,0 +1,11 @@
+---
+- name: Check docker status
+  shell: docker -v
+  register: docker_result
+- debug: msg="{{ result.stdout_lines }}"
+- fail:
+    msg: "Failed - docker is not installed"
+  when: docker_result is failed
+- debug:
+    msg: "Success - docker is installed"
+  when:  docker_result is success

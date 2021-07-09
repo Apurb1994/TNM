@@ -1,0 +1,110 @@
+---
+- include_tasks: ../../common/create_base_directory.yml
+
+- include_tasks: ../../common/kill_process.yml
+  vars:
+    process_name: "tnmMiddlewareTest"
+
+- name: Check bkp_path path if not present 
+  stat:
+    path: /opt/tnmApps/tnmMiddlewareTest/standalone/deployments/middleware.war/WEB-INF/BACKUP
+  register: bkp_path
+
+- name: "echo BKP directory already existed"
+  debug:
+    msg: "the BKP directory is already existed"
+  when: bkp_path.stat.exists
+
+- name: Create BKP path directory if not exists
+  file:
+    path: /opt/tnmApps/tnmMiddlewareTest/standalone/deployments/middleware.war/WEB-INF/BACKUP
+    state: directory
+    mode: 0775
+    group: "{{ user_name }}"
+    owner: "{{ user_name }}"
+  when: bkp_path.stat.exists == false
+
+- name: Check bkp_path path if not present 
+  stat:
+    path: /home/tnmops/.m2/repository/co/in/sixdee/TNMNEW/BACKUP
+  register: bkp_path
+
+- name: "echo BKP directory already existed"
+  debug:
+    msg: "the BKP directory is already existed"
+  when: bkp_path.stat.exists
+
+- name: Create BKP path directory if not exists
+  file:
+    path: /home/tnmops/.m2/repository/co/in/sixdee/TNMNEW/BACKUP
+    state: directory
+    mode: 0775
+    group: "{{ user_name }}"
+    owner: "{{ user_name }}"
+  when: bkp_path.stat.exists == false
+
+- name: Search war file in mapping.txt file
+  shell: cd /home/tnmops |cat mapping.txt|grep om-model > /dev/null 2>&1 ; echo $? 
+  register: om-model
+- debug: msg="{{ war_value.stdout_lines }}"
+  
+- name: move old deployed packages
+  shell: |
+    cd {{ middleware_lib_path }}
+    mv om-model-*.jar /opt/tnmApps/tnmMiddlewareTest/standalone/deployments/middleware.war/WEB-INF/BACKUP
+    echo "move old packages successfully..."
+  when: om-model.stdout == "0"
+
+- name: Search war file in mapping.txt file
+  shell: cd /home/tnmops |cat mapping.txt|grep om-core > /dev/null 2>&1 ; echo $? 
+  register: om-core
+- debug: msg="{{ war_value.stdout_lines }}"
+
+- name: move old deployed packages
+  shell: |
+    cd {{ middleware_lib_path }}
+    mv om-core-*.jar /opt/tnmApps/tnmMiddlewareTest/standalone/deployments/middleware.war/WEB-INF/BACKUP
+    echo "move old packages successfully..."
+  when: om-core.stdout == "0"
+
+- name: Search war file in mapping.txt file
+  shell: cd /home/tnmops |cat mapping.txt|grep TNMNEW > /dev/null 2>&1 ; echo $? 
+  register: TNMNEW
+- debug: msg="{{ TNMNEW.stdout_lines }}"  
+
+- name: move old deployed packages
+  shell: |
+    cd {{ middleware_tnmnew_path }}
+    mv TNMNEW-*.jar /home/tnmops/.m2/repository/co/in/sixdee/TNMNEW/BACKUP
+    echo "move old packages successfully..."
+  when: TNMNEW.stdout == "0"
+
+
+- include_tasks: ../../common/artifactory_download.yml
+
+# - name: moving created bkp files
+#   shell: |
+#     cd {{ middleware_lib_path }}
+#     mv CRM-*.war BKP_CRM-{{ deployment_version }}.war_`date -I`
+#     mv BKP_CRM-*.war_* /opt/tnmApps/tnmCrmTest/standalone/CRM_BACKUP
+#     rm -rf CRM-*.war.*
+#     #mv CRM-*.war bkp_`date -I`_CBS-*.war
+#     echo "move old packages successfully..."
+#     register: result
+# - debug: msg="{{ result.stdout_lines }}"
+
+# - name: Rename ? file if found in deployment path
+#   shell: |
+#     cd {{ tnm_crm_deployment_path  }}
+#     mv ? TNM-CRM-{{ deployment_version }}.war
+#   when: war_value.stdout == "0"
+#   ignore_errors: yes
+  
+# - name: Creating dodeploy file
+#   shell: |   
+#     cd {{ tnm_crm_deployment_path  }}
+#     #rm -rf CRM-*.war.*
+#     touch CRM-{{ deployment_version }}.war.dodeploy
+#     ls -l
+#     echo "dodeploy file created successfully..."
+#   when: war_value.stdout == "0"

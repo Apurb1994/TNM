@@ -1,0 +1,21 @@
+---
+- include_tasks: ../../common/pre_check.yml
+#- include_tasks: ../../common/check_jdk_status.yml
+- include_tasks: ../../common/check_mysql_status.yml
+
+
+- name: Show MIDDLEWARE application running status
+  shell: ps -ef | grep "tnmMiddlewareTest"
+  register: middleware_status
+- debug: msg="{{middleware_status.stdout_lines}}"
+
+- name: Check MIDDLEWARE application running status
+  shell: ps -ef | grep "tnmMiddlewareTest" > /dev/null 2>&1 ; echo $?
+  register: middleware_status_check
+- debug:
+    msg: "tnmMiddlewareTest application is up and running"
+  when: middleware_status_check.stdout == "0"
+- fail:
+    msg: "tnmMiddlewareTest application not running"
+  when: middleware_status_check.stdout != "0"
+

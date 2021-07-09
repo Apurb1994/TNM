@@ -1,0 +1,16 @@
+---
+- name: Show Deployment Details
+  shell: |
+    hostname=$(hostname)
+    hostip=$(hostname -I | awk '{print $1}')
+
+    echo "-------------------------------------------------------------------------------"
+    echo "<<<<<<<<<<<<<<<<<<<<< Show Application Deployment Details >>>>>>>>>>>>>>>>>>>>>"
+    echo "-------------------------------------------------------------------------------"
+    echo "Application Name       -> {{ app_name }}"
+    echo "Deployment Version     -> {{ deployment_version }}"
+    echo "Deployment Environment -> {{ deployment_env }}"    
+    echo "Deployment Host        -> $hostip ($hostname)"
+    echo "-------------------------------------------------------------------------------"
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

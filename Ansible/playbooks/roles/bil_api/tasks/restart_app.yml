@@ -1,0 +1,7 @@
+---
+- name: Restart the service
+  shell: |
+    cd {{ bil_api_app_startup_path }}
+    nohup sh restart.sh > /dev/null 2>&1 &
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

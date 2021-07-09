@@ -1,0 +1,8 @@
+---
+- name: Restarting the application
+  shell: |
+    cd {{ om_model_startup_path }}
+    nohup sh restart.sh > /dev/null 2>&1 &
+    echo "Application started successfully..."
+  register: result
+- debug: msg="{{ result.stdout_lines }}"

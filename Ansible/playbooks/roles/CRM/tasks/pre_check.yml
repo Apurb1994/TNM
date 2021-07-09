@@ -1,0 +1,21 @@
+---
+- include_tasks: ../../common/pre_check.yml
+#- include_tasks: ../../common/check_jdk_status.yml
+- include_tasks: ../../common/check_mysql_status.yml
+
+
+- name: Show TNM-CRM application running status
+  shell: ps -ef | grep -w "tnmCrm"
+  register: tnm_crm_status
+- debug: msg="{{tnm_crm_status.stdout_lines}}"
+
+- name: Check TNM-CRM application running status
+  shell: ps -ef | grep -w "tnmCrm" > /dev/null 2>&1 ; echo $?
+  register: tnm_crm_status_check
+- debug:
+    msg: "tnmCrm application is up and running"
+  when: tnm_crm_status_check.stdout == "0"
+- fail:
+    msg: "tnmCrm application not running"
+  when: tnm_crm_status_check.stdout != "0"
+

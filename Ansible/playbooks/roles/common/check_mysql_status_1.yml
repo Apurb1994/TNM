@@ -1,0 +1,46 @@
+---
+# - name: To check the MySQL installation status local
+#   shell: systemctl status mysqld@3306
+#   register: result
+# - debug: msg="{{ result.stdout_lines }}"
+# - fail:
+#     msg: "MySQL is not running or inactive (dead)..."
+#   when: 'result.stdout is search("inactive (dead)") == true'
+# - debug:
+#     msg: "MySQL is active (running)..."
+#   when: 'result.stdout is search("active (running)") == true'
+
+- name: To check the MySQL status remote
+  shell:  mysqladmin -u{{ db_user }} -p{{ db_pass_1 }} -h{{ db_host }} -P{{ db_port }} ping
+  register: result
+- debug: msg="{{result.stdout_lines}}"
+- fail:
+    msg: "MySQL is not running or inactive (dead)..."
+  when: 'result.stdout is search("mysqld is alive") != true'
+- debug:
+    msg: "MySQL is active (running)..."
+  when: 'result.stdout is search("mysqld is alive") == true'
+
+# - name: Check '/usr/bin/expect' is istalled or not
+#   shell: |
+#     echo "Install 'expect' if not available on {{ db_host }}"
+#     echo "Command - 'yum install expect'"
+#     echo "Note - Ansible can't do this as it requries root/admin access..."
+#   register: result
+# - debug: msg="{{result.stdout_lines}}"
+
+# - name: Checking Application Specific DB Access
+#   shell: |
+#     set timeout 300
+#     spawn mysql -u{{ db_user }} -p{{ db_pass }} -h{{ db_host }} -P{{ db_port }} -A {{ db_name }}
+#     expect "mysql> " { send "SELECT table_name FROM information_schema.tables WHERE table_schema = '{{ db_name }}';\n"}
+#     expect "mysql> " { send "exit\n" }
+#   args:
+#     executable: /usr/bin/expect
+#   register: result
+# - debug:
+#     msg: "{{result.stdout_lines}}"
+#   when: 'result.stdout is search("ERROR") != true'
+# - fail:
+#     msg: "{{result.stdout_lines}}"
+#   when: 'result.stdout is search("ERROR") == true'

@@ -1,0 +1,36 @@
+---
+- pause:
+    minutes: 1
+
+- include_tasks: ../../common/post_check.yml
+
+
+- name: Show application status
+  shell: ps -ef | grep -w "tnmMiddleware"
+  register: middleware_status
+- debug: msg="{{ middleware_status.stdout_lines }}"
+
+- name: Check MIDDLEWARE APPLICATION running status
+  shell: ps -ef | grep -w "tnmMiddleware" > /dev/null ; echo $?
+  register: middleware_status_check
+- debug:
+    msg: "MIDDLEWARE APPLICATION running"
+  when: middleware_status_check.stdout == "0"
+- fail:
+    msg: "MIDDLEWARE APPLICATION not running"
+  when: middleware_status_check.stdout != "0"
+
+# - name: Show WFLYSRV0010 keyword in nohup.out file
+#   shell: cat "{{ middleware_log_path }}" | grep "WFLYSRV0010" | tail -1
+#   register: result
+# - debug: msg="{{ result.stdout_lines }}"
+
+# - name: Check for WFLYSRV0010 keyword in nohup.out file
+#   shell: cat "{{ middleware_log_path }}" | grep "WFLYSRV0010" > /dev/null 2>&1 ; echo $?
+#   register: result
+# - debug:
+#     msg: "WFLYSRV0010 successfully deployed"
+#   when: result.stdout == "0"
+# - fail:
+#     msg: "WFLYSRV0010 not deployed successfully"
+#   when: result.stdout != "0"

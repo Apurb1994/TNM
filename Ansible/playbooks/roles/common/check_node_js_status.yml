@@ -1,0 +1,65 @@
+---
+- name: Shows NodeJS version
+  raw: node --version
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: NodeJS version check (>= v7)
+  raw: node --version 2>&1 | cut -d'.' -f1 | sed 's/v//g'
+  register: result  
+- debug: 
+    msg="{{ result.stdout_lines }}"
+  when: result > 7
+- fail: 
+    msg="node version is not greater than v7 "
+  when: result < 7  
+
+#- name: Shows Node Version Manager (NVM) version
+#  raw: nvm --version
+#  register: result
+#- debug: msg="{{ result.stdout_lines }}"
+
+#- name: Check Node Version Manager (NVM) status
+#  raw: nvm --version > /dev/null 2>&1 ; echo $?
+#  register: nvm_check
+#- debug:  
+#    msg: "NVM is installed"
+#  when: "nvm_check.stdout|int == 0"
+#- fail:  
+#    msg: "NVM is not installed"
+#  when: "nvm_check.stdout|int != 0"
+
+- name: Shows process manager for Node.js (pm2) version
+  shell: pm2 --version
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Shows process manager for Node.js (pm2) version
+  shell: pm2 status
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+- name: Check pm2 status
+  shell: pm2 --version > /dev/null 2>&1 ; echo $?
+  register: pm2_check
+- debug:  
+    msg: "pm2 is installed"
+  when: pm2_check.stdout == "0"
+- fail:  
+    msg: "pm2 is not installed"
+  when: pm2_check.stdout != "0"
+
+- name: Shows pm2 list
+  shell: pm2 list
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+
+# - name: Check pm2 selfcare status
+#   shell: pm2 list | grep selfcare > /dev/null 2>&1 ; echo $?
+#   register: pm2_list
+# - debug:  
+#     msg: "pm2 selfcare is running "
+#   when: pm2_list.stdout == "0"
+# - fail:  
+#     msg: "pm2 selfcare is not running"
+#   when: pm2_list.stdout != "0"

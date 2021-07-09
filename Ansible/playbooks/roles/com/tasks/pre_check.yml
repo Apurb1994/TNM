@@ -1,0 +1,13 @@
+---
+- include_tasks: ../../common/pre_check.yml
+
+- name: Checking COM application status
+  shell: ps -aef | grep "OM_HARGRAY"
+  register: result
+- debug: msg="{{ result.stdout_lines }}"
+- fail:
+    msg: "OM_HARGRAY application is not running..."
+  when: 'result.stdout is search("/opt/BSS/OM_HARGRAY/standalone") == false'
+- debug:
+    msg: "OM_HARGRAY application is running properly..."
+  when: 'result.stdout is search("/opt/BSS/OM_HARGRAY/standalone") == true'
